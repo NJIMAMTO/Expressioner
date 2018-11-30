@@ -75,13 +75,13 @@ y_test = keras.utils.to_categorical(y_test,2)
 model = Sequential()
 #model.add(Dense(output_dim=24, input_dim=34, activation='sigmoid'))
 #model.add(Dense(output_dim=2, input_dim=24, activation='sigmoid'))
-model.add(Dense(24, input_dim=34, init='uniform', activation='relu'))
-model.add(Dense(8, init='uniform', activation='relu'))
+model.add(Dense(12, input_dim=16, init='uniform', activation='relu'))
+#model.add(Dense(4, init='uniform', activation='relu'))
 model.add(Dense(2, init='uniform', activation='sigmoid'))
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
 #ニューラルネットワークの学習
-history = model.fit(x_train, y_train,batch_size=40,epochs=100,verbose=1,validation_data=(x_test, y_test))
+history = model.fit(x_train, y_train,batch_size=50,epochs=80,verbose=1,validation_data=(x_test, y_test))
 #history = model.fit(x_train, y_train,batch_size=20,epochs=200,verbose=1)
 
 #ニューラルネットワークの推論
