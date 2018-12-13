@@ -61,10 +61,7 @@ x = pd.DataFrame(df_concat.drop("lavel",axis=1))
 y =  pd.DataFrame(df_concat["lavel"])
 
 #説明変数・目的変数をそれぞれ訓練データ・テストデータに分割
-x_train,x_test,y_train,y_test = train_test_split(x,y,test_size=0.2)
-
-print(x_train)
-print(y_train)
+x_train,x_test,y_train,y_test = train_test_split(x,y,test_size=0.3)
 #データの整形
 x_train = x_train.astype(np.float)
 x_test = x_test.astype(np.float)
@@ -82,7 +79,7 @@ model.add(Dense(2, init='uniform', activation='sigmoid'))
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
 #ニューラルネットワークの学習
-history = model.fit(x_train, y_train,batch_size=50,epochs=80,verbose=1,validation_data=(x_test, y_test))
+history = model.fit(x_train, y_train,batch_size=10,epochs=400,verbose=1,validation_data=(x_test, y_test))
 #history = model.fit(x_train, y_train,batch_size=20,epochs=200,verbose=1)
 
 #ニューラルネットワークの推論
