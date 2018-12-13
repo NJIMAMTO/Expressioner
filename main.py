@@ -3,7 +3,7 @@
 
 #モジュールの読み込み
 import sys 
-
+import math
 import pandas as pd
 from pandas import Series,DataFrame
 
@@ -18,9 +18,28 @@ import keras
 import keras.backend as K
 from keras.datasets import fashion_mnist
 from keras.models import Sequential
-from keras.layers import Dense, Dropout
+from keras.layers import Dense, Dropout, BatchNormalization
 from keras.optimizers import RMSprop
 from keras.optimizers import Adam
+from keras.utils import Sequence
+
+"""
+class AudioSequence(Sequence):
+    def __init__(self, x, y, batch_size):
+        self.x = x
+        self.y = y
+        self.batch_size = batch_size
+
+    def __getitem__(self, idx):
+        # バッチサイズ分取り出す
+        batch_x = self.x[idx * self.batch_size:(idx + 1) * self.batch_size]
+        batch_y = self.y[idx * self.batch_size:(idx + 1) * self.batch_size]
+
+        return batch_x, batch_y
+
+    def __len__(self):
+        return math.ceil(len(self.x) / self.batch_size)
+"""
 
 def plot_history(history):
     # print(history.history.keys())
@@ -58,7 +77,8 @@ df      = df.iloc[:,0:10]
 df_n['lavel'] = 0
 df['lavel'] = 1
 
-print(df_n)
+df_n = df_n.dropna(how='any')
+df = df.dropna(how='any')
 
 #無表情データと有表情データを2000ずつランダム抽出し結合
 df_concat = pd.concat([df_n.sample(n=2000), df.sample(n=2000)])
@@ -67,36 +87,45 @@ df_concat = pd.concat([df_n.sample(n=2000), df.sample(n=2000)])
 x = pd.DataFrame(df_concat.drop("lavel",axis=1))
 y =  pd.DataFrame(df_concat["lavel"])
 
+print(x)
+
 #説明変数・目的変数をそれぞれ訓練データ・テストデータに分割
 x_train,x_test,y_train,y_test = train_test_split(x,y,test_size=0.3)
 #データの整形
 x_train = x_train.astype(np.float)
 x_test = x_test.astype(np.float)
 
+print("x_train: {}\n x_test: {}".format(x_train.shape, x_test.shape))
+
 y_train = keras.utils.to_categorical(y_train,2)
 y_test = keras.utils.to_categorical(y_test,2)
 
 #ニューラルネットワークモデルの設定
-# model = Sequential()
-#model.add(Dense(output_dim=24, input_dim=34, activation='sigmoid'))
-#model.add(Dense(output_dim=2, input_dim=24, activation='sigmoid'))
-# model.add(Dense(9, activation='relu', input_shape=(10,)))
-#model.add(Dense(4, init='uniform', activation='relu'))
-# model.add(Dense(2, activation='sigmoid'))
 model_input = keras.layers.Input(shape=(10,))
-x = Dense(9)(model_input)
+x = model_input
+x = Dense(9)(x)
 x = keras.layers.Activation('relu')(x)
+
 x = Dense(2)(x)
 x = keras.layers.Activation('sigmoid')(x)
 model = keras.Model(model_input, x)
-model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-model.summary()
 
+model.compile(
+                optimizer='adam', 
+                loss='binary_crossentropy', 
+                metrics=['accuracy'])
+
+"""
+model.summary()
 keras.utils.plot_model(model, "./test.png", show_shapes=True)
 print(K.floatx())
+batch_size = 50
+train_gen = AudioSequence(x_train, y_train, batch_size)
+"""
 
 #ニューラルネットワークの学習
-history = model.fit(x_train, y_train,batch_size=10,epochs=400,verbose=1,validation_data=(x_test, y_test))
+#history = model.fit_generator(train_gen, epochs=80,verbose=1,validation_data=(x_test, y_test))
+history = model.fit(x_train, y_train,batch_size=50,epochs=80,verbose=1,validation_data=(x_test, y_test))
 #history = model.fit(x_train, y_train,batch_size=20,epochs=200,verbose=1)
 
 #ニューラルネットワークの推論
