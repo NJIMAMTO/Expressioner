@@ -15,6 +15,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import keras
+import keras.backend as K
 from keras.datasets import fashion_mnist
 from keras.models import Sequential
 from keras.layers import Dense, Dropout
@@ -45,13 +46,19 @@ def plot_history(history):
 #CSVファイルの読み込み
 args = sys.argv
 dataset_pass_not = args[1]
-dataset_pass = args[2]
-df_n = pd.read_csv(dataset_pass_not,index_col=0)
-df =  pd.read_csv(dataset_pass,index_col=0)
+dataset_pass     = args[2]
+df_n        = pd.read_csv(dataset_pass_not,index_col=0)
+df          =  pd.read_csv(dataset_pass,index_col=0)
+##################################################
+df_n    = df_n.iloc[:,0:10]
+df      = df.iloc[:,0:10]
+##################################################
 
 #目的変数の追加
 df_n['lavel'] = 0
 df['lavel'] = 1
+
+print(df_n)
 
 #無表情データと有表情データを2000ずつランダム抽出し結合
 df_concat = pd.concat([df_n.sample(n=2000), df.sample(n=2000)])
@@ -70,13 +77,23 @@ y_train = keras.utils.to_categorical(y_train,2)
 y_test = keras.utils.to_categorical(y_test,2)
 
 #ニューラルネットワークモデルの設定
-model = Sequential()
+# model = Sequential()
 #model.add(Dense(output_dim=24, input_dim=34, activation='sigmoid'))
 #model.add(Dense(output_dim=2, input_dim=24, activation='sigmoid'))
-model.add(Dense(12, input_dim=16, init='uniform', activation='relu'))
+# model.add(Dense(9, activation='relu', input_shape=(10,)))
 #model.add(Dense(4, init='uniform', activation='relu'))
-model.add(Dense(2, init='uniform', activation='sigmoid'))
+# model.add(Dense(2, activation='sigmoid'))
+model_input = keras.layers.Input(shape=(10,))
+x = Dense(9)(model_input)
+x = keras.layers.Activation('relu')(x)
+x = Dense(2)(x)
+x = keras.layers.Activation('sigmoid')(x)
+model = keras.Model(model_input, x)
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+model.summary()
+
+keras.utils.plot_model(model, "./test.png", show_shapes=True)
+print(K.floatx())
 
 #ニューラルネットワークの学習
 history = model.fit(x_train, y_train,batch_size=10,epochs=400,verbose=1,validation_data=(x_test, y_test))
