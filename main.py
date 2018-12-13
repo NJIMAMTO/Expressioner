@@ -63,13 +63,14 @@ y =  pd.DataFrame(df_concat["lavel"])
 #説明変数・目的変数をそれぞれ訓練データ・テストデータに分割
 x_train,x_test,y_train,y_test = train_test_split(x,y,test_size=0.2)
 
+print(x_train)
+print(y_train)
 #データの整形
 x_train = x_train.astype(np.float)
 x_test = x_test.astype(np.float)
 
 y_train = keras.utils.to_categorical(y_train,2)
 y_test = keras.utils.to_categorical(y_test,2)
-
 
 #ニューラルネットワークモデルの設定
 model = Sequential()
