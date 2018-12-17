@@ -45,21 +45,23 @@ def plot_history(history):
     # print(history.history.keys())
 
     # 精度の履歴をプロット
+    plt.subplot(2,1,1)
     plt.plot(history.history['acc'])
     plt.plot(history.history['val_acc'])
     #plt.title('model accuracy')
     plt.xlabel('epoch')
     plt.ylabel('accuracy')
     plt.legend(['Lerning', 'Test'], loc='lower right')
-    plt.show()
+    #plt.show()
 
     # 損失の履歴をプロット
+    plt.subplot(2,1,2)
     plt.plot(history.history['loss'])
     plt.plot(history.history['val_loss'])
     #plt.title('model loss')
     plt.xlabel('epoch')
     plt.ylabel('loss')
-    plt.legend(['Lerning', 'Test'], loc="upper left")
+    plt.legend(['Lerning', 'Test'], loc="upper right")
     plt.show()
 
 #CSVファイルの読み込み
@@ -69,26 +71,21 @@ dataset_pass     = args[2]
 df_n        = pd.read_csv(dataset_pass_not,index_col=0)
 df          =  pd.read_csv(dataset_pass,index_col=0)
 ##################################################
-df_n    = df_n.iloc[:,0:10]
-df      = df.iloc[:,0:10]
+#df_n    = df_n.iloc[:,0:10]
+#df      = df.iloc[:,0:10]
 ##################################################
 
 #目的変数の追加
 df_n['lavel'] = 0
 df['lavel'] = 1
-
+#欠損値の除去
 df_n = df_n.dropna(how='any')
 df = df.dropna(how='any')
-
 #無表情データと有表情データを2000ずつランダム抽出し結合
 df_concat = pd.concat([df_n.sample(n=2000), df.sample(n=2000)])
-
 #説明変数と目的変数の設定
 x = pd.DataFrame(df_concat.drop("lavel",axis=1))
 y =  pd.DataFrame(df_concat["lavel"])
-
-print(x)
-
 #説明変数・目的変数をそれぞれ訓練データ・テストデータに分割
 x_train,x_test,y_train,y_test = train_test_split(x,y,test_size=0.3)
 #データの整形
@@ -101,9 +98,9 @@ y_train = keras.utils.to_categorical(y_train,2)
 y_test = keras.utils.to_categorical(y_test,2)
 
 #ニューラルネットワークモデルの設定
-model_input = keras.layers.Input(shape=(10,))
+model_input = keras.layers.Input(shape=(16,))
 x = model_input
-x = Dense(9)(x)
+x = Dense(12)(x)
 x = keras.layers.Activation('relu')(x)
 
 x = Dense(2)(x)
@@ -125,7 +122,11 @@ train_gen = AudioSequence(x_train, y_train, batch_size)
 
 #ニューラルネットワークの学習
 #history = model.fit_generator(train_gen, epochs=80,verbose=1,validation_data=(x_test, y_test))
-history = model.fit(x_train, y_train,batch_size=50,epochs=80,verbose=1,validation_data=(x_test, y_test))
+history = model.fit(x_train, y_train,
+                    batch_size=50,
+                    epochs=80,
+                    verbose=1,
+                    validation_data=(x_test, y_test))
 #history = model.fit(x_train, y_train,batch_size=20,epochs=200,verbose=1)
 
 #ニューラルネットワークの推論
@@ -133,6 +134,15 @@ score = model.evaluate(x_test,y_test,verbose=1)
 print("\n")
 print("Test loss:",score[0])
 print("Test accuracy:",score[1])
+
+#historyをエクセルファイルに出力
+DF = pd.DataFrame(history.history)
+DF = DF.ix[:,['acc','val_acc','loss','val_loss']]
+DF.index = DF.index + 1
+
+output_name = '5_50_80'
+DF.to_excel('/media/mokugyo/ボリューム/Experiment_20180127/学習結果/' + output_name + '.xlsx')
+
 
 # 学習履歴をプロット
 plot_history(history)
