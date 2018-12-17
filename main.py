@@ -139,9 +139,8 @@ print("Test accuracy:",score[1])
 DF = pd.DataFrame(history.history)
 DF = DF.ix[:,['acc','val_acc','loss','val_loss']]
 DF.index = DF.index + 1
-
-output_name = '5_50_80'
-DF.to_excel('/media/mokugyo/ボリューム/Experiment_20180127/学習結果/' + output_name + '.xlsx')
+#output_name = '表情のみ_補正あり'
+#DF.to_excel('/media/mokugyo/ボリューム/Experiment_20180127/学習結果/' + output_name + '.xlsx')
 
 
 # 学習履歴をプロット
