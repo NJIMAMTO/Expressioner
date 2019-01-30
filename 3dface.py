@@ -23,6 +23,13 @@ from keras.optimizers import RMSprop
 from keras.optimizers import Adam
 from keras.utils import Sequence
 
+from keras.models import Sequential
+from keras.layers.core import Dense, Activation
+
+from sklearn.metrics import classification_report, confusion_matrix
+
+from sklearn.preprocessing import OneHotEncoder
+
 def plot_history(history):
     # print(history.history.keys())
 
@@ -80,14 +87,15 @@ x_test = x_test.astype(np.float)
 print("x_train: {}\n x_test: {}".format(x_train.shape, x_test.shape))
 
 #ニューラルネットワークモデルの設定
-model_input = keras.layers.Input(shape=(16,))
-x = model_input
-x = Dense(12)(x)
-x = keras.layers.Activation('relu')(x)
+model = Sequential()
+model.add(Dense(12, input_shape=(18,)))
+model.add(Activation('relu'))
 
-x = Dense(7)(x)
-x = keras.layers.Activation('softmax')(x)
-model = keras.Model(model_input, x)
+model.add(Dense(7))
+model.add(Activation('softmax'))
+
+model.add(Dense(7))
+model.add(Activation('softmax'))
 
 model.compile(
                 optimizer='adam', 
@@ -101,11 +109,19 @@ history = model.fit(x_train, y_train,
                     verbose=1,
                     validation_data=(x_test, y_test))
 
+"""
 #ニューラルネットワークの推論
 score = model.evaluate(x_test,y_test,verbose=1)
 print("\n")
 print("Test loss:",score[0])
 print("Test accuracy:",score[1])
+"""
+
+predict_classes = model.predict_classes(x_test, verbose=0)
+true_classes = np.argmax(y_test,1)
+#print(confusion_matrix(OneHotEncoder().fit_transform(y_test), OneHotEncoder().fit_transform(labels_pred)))
+print(confusion_matrix(true_classes, predict_classes))
+
 """
 #historyをエクセルファイルに出力
 DF = pd.DataFrame(history.history)
