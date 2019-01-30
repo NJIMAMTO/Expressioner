@@ -117,10 +117,10 @@ print("Test loss:",score[0])
 print("Test accuracy:",score[1])
 """
 
-predict_classes = model.predict_classes(x_test, verbose=0)
-true_classes = np.argmax(y_test,1)
-#print(confusion_matrix(OneHotEncoder().fit_transform(y_test), OneHotEncoder().fit_transform(labels_pred)))
-print(confusion_matrix(true_classes, predict_classes))
+#混同行列を算出
+predict_class = model.predict_classes(x_test, verbose=0)
+true_class = np.argmax(y_test,1)
+print(confusion_matrix(true_class, predict_class))
 
 """
 #historyをエクセルファイルに出力
