@@ -9,7 +9,8 @@ from pandas import Series,DataFrame
 
 from sklearn import svm
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, confusion_matrix
+from sklearn.preprocessing import OneHotEncoder
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -22,13 +23,9 @@ from keras.layers import Dense, Dropout, BatchNormalization
 from keras.optimizers import RMSprop
 from keras.optimizers import Adam
 from keras.utils import Sequence
-
-from keras.models import Sequential
 from keras.layers.core import Dense, Activation
 
-from sklearn.metrics import classification_report, confusion_matrix
-
-from sklearn.preprocessing import OneHotEncoder
+import optuna
 
 def plot_history(history):
     # print(history.history.keys())
@@ -90,6 +87,7 @@ rename_cols = ["class",
                 "4","5",        #eye
                 "6","7","8","9" #mouth
                 ]
+
 df_right = big_frame[big_frame["rot_y"] >= 0]
 df_right = df_right[cols_right]
 df_right.columns = rename_cols
@@ -99,7 +97,7 @@ df_left = df_left[cols_left]
 df_left.columns = rename_cols
 
 big_frame = pd.concat([df_left, df_right], ignore_index=True)
-print(big_frame)
+
 #説明変数と目的変数の設定
 x = pd.DataFrame(big_frame.drop("class",axis=1))
 y =  pd.DataFrame(big_frame["class"])
