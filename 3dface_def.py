@@ -110,7 +110,7 @@ def objective(trial):
     mid_units = int(trial.suggest_discrete_uniform('mid_units', 5, 100, 1)) # ユニット数
     dropout_rate = trial.suggest_uniform('dropout_rate', 0, 1) # ドロップアウト率
     activation = trial.suggest_categorical('activation', ['relu', 'sigmoid']) # 活性化関数
-    optimizer = trial.suggest_categorical('optimizer', ['sgd', 'adam', 'rmsprop']) # 最適化アルゴリズム
+    optimizer = trial.suggest_categorical('optimizer', ['sgd', 'adam']) # 最適化アルゴリズム
 
     # 学習モデルの構築と学習の開始
     model = create_model(n_layer, activation, mid_units, dropout_rate)
