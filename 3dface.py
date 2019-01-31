@@ -57,25 +57,53 @@ def plot_history(history):
 path = "/media/mokugyo/ボリューム/3Dface"
 files = ["F_Angry","F_Disgust","F_Fear","F_Happy","F_Neutral","F_Surprise","F_Unhappy",
     "M_Angry","M_Disgust","M_Fear","M_Happy","M_Neutral","M_Surprise","M_Unhappy"]
+V_4 = ["V0S","V2L","V0S_r","V2L_r"]
+V_6 = ["V0S","V2L","V4L","V0S_r","V2L_r","V4L_r"]
+
 dfs = []
 
 for ii in range(0,14):
-    file_path = path + "/" + files[ii] + ".csv"
-    df          =  pd.read_csv(file_path,index_col=0)
-    dfs.append(df)
+    for yy in range(0,4):
+        file_path = path + "/" + files[ii] + "/" + V_4[yy] + ".csv"
+        print(file_path)
+        df          =  pd.read_csv(file_path,index_col=0)
+        dfs.append(df)  
 big_frame = pd.concat(dfs, ignore_index=True)
 #big_frame      = big_frame.iloc[:,0:11]
 
 #欠損値の除去
 big_frame = big_frame.dropna(how='any')
 
-#無表情データと有表情データを2000ずつランダム抽出し結合
-#df_concat = pd.concat([df_n.sample(n=2000), df.sample(n=2000)])
+#ピッチ角に応じて顔半分の特徴点のみを抽出
+cols_right = ["class",
+            "23-46","25-46","27-46",        #right_eyebrow
+            "38-42","45-47",                #eye
+            "49-34","52-34","55-34","58-34" #mouth
+            ] 
+cols_left = ["class",
+            "18-37","20-37","22-37",        #left_eyebrow
+            "38-42","45-47",                #eye
+            "49-34","52-34","55-34","58-34" #mouth
+            ] 
+rename_cols = ["class",
+                "1","2","3",    #eyebrow
+                "4","5",        #eye
+                "6","7","8","9" #mouth
+                ]
+df_right = big_frame[big_frame["rot_y"] >= 0]
+df_right = df_right[cols_right]
+df_right.columns = rename_cols
 
+df_left = big_frame[big_frame["rot_y"] < 0]
+df_left = df_left[cols_left]
+df_left.columns = rename_cols
+
+big_frame = pd.concat([df_left, df_right], ignore_index=True)
+print(big_frame)
 #説明変数と目的変数の設定
 x = pd.DataFrame(big_frame.drop("class",axis=1))
 y =  pd.DataFrame(big_frame["class"])
-y = keras.utils.to_categorical(y)
+y = keras.utils.to_categorical(y) #class -> onehot_vec
 
 #説明変数・目的変数をそれぞれ訓練データ・テストデータに分割
 x_train,x_test,y_train,y_test = train_test_split(x,y,test_size=0.3,random_state=1)
@@ -88,7 +116,7 @@ print("x_train: {}\n x_test: {}".format(x_train.shape, x_test.shape))
 
 #ニューラルネットワークモデルの設定
 model = Sequential()
-model.add(Dense(12, input_shape=(18,)))
+model.add(Dense(12, input_shape=(9,)))
 model.add(Activation('relu'))
 
 model.add(Dense(7))
