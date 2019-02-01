@@ -27,6 +27,63 @@ from keras.layers.core import Dense, Activation
 
 import optuna
 
+import time
+import datetime
+
+trials = 0
+
+#=======================初回データロード=======================#
+path = "/media/mokugyo/ボリューム/3Dface"
+files = ["F_Angry","F_Disgust","F_Fear","F_Happy","F_Neutral","F_Surprise","F_Unhappy",
+    "M_Angry","M_Disgust","M_Fear","M_Happy","M_Neutral","M_Surprise","M_Unhappy"]
+V_4 = ["V0S","V2L","V0S_r","V2L_r"]
+V_6 = ["V0S","V2L","V4L","V0S_r","V2L_r","V4L_r"]
+
+dfs = []
+
+for ii in range(0,14):
+    for yy in range(0,4):
+        file_path = path + "/" + files[ii] + "/" + V_4[yy] + ".csv"
+        df          =  pd.read_csv(file_path,index_col=0)
+        dfs.append(df)  
+big_frame = pd.concat(dfs, ignore_index=True)
+#欠損値の除去
+big_frame = big_frame.dropna(how='any')
+
+#ピッチ角に応じて顔半分の特徴点のみを抽出
+cols_right = ["class",
+                "23-46","25-46","27-46",        #right_eyebrow
+                "38-42","45-47",                #eye
+                "49-34","52-34","55-34","58-34" #mouth
+                ] 
+cols_left = ["class",
+                "18-37","20-37","22-37",        #left_eyebrow
+                "38-42","45-47",                #eye
+                "49-34","52-34","55-34","58-34" #mouth
+                ] 
+rename_cols = ["class",
+                    "1","2","3",    #eyebrow
+                    "4","5",        #eye
+                    "6","7","8","9" #mouth
+                    ]
+
+df_right = big_frame[big_frame["rot_y"] >= 0]
+df_right = df_right[cols_right]
+df_right.columns = rename_cols
+
+df_left = big_frame[big_frame["rot_y"] < 0]
+df_left = df_left[cols_left]
+df_left.columns = rename_cols
+
+big_frame = pd.concat([df_left, df_right], ignore_index=True)
+
+#説明変数と目的変数の設定
+x = pd.DataFrame(big_frame.drop("class",axis=1))
+y =  pd.DataFrame(big_frame["class"])
+y = keras.utils.to_categorical(y) #class -> onehot_vec
+
+#=======================初回データロードここまで=======================#
+
 def create_model(n_layer, activation, mid_units, dropout_rate):
     model = Sequential()
 
@@ -47,58 +104,9 @@ def create_model(n_layer, activation, mid_units, dropout_rate):
     return model
 
 def objective(trial):
-    #=======================データロード=======================#
-    path = "/media/mokugyo/ボリューム/3Dface"
-    files = ["F_Angry","F_Disgust","F_Fear","F_Happy","F_Neutral","F_Surprise","F_Unhappy",
-        "M_Angry","M_Disgust","M_Fear","M_Happy","M_Neutral","M_Surprise","M_Unhappy"]
-    V_4 = ["V0S","V2L","V0S_r","V2L_r"]
-    V_6 = ["V0S","V2L","V4L","V0S_r","V2L_r","V4L_r"]
-
-    dfs = []
-
-    for ii in range(0,14):
-        for yy in range(0,4):
-            file_path = path + "/" + files[ii] + "/" + V_4[yy] + ".csv"
-            df          =  pd.read_csv(file_path,index_col=0)
-            dfs.append(df)  
-    big_frame = pd.concat(dfs, ignore_index=True)
-    #欠損値の除去
-    big_frame = big_frame.dropna(how='any')
-
-    #ピッチ角に応じて顔半分の特徴点のみを抽出
-    cols_right = ["class",
-                "23-46","25-46","27-46",        #right_eyebrow
-                "38-42","45-47",                #eye
-                "49-34","52-34","55-34","58-34" #mouth
-                ] 
-    cols_left = ["class",
-                "18-37","20-37","22-37",        #left_eyebrow
-                "38-42","45-47",                #eye
-                "49-34","52-34","55-34","58-34" #mouth
-                ] 
-    rename_cols = ["class",
-                    "1","2","3",    #eyebrow
-                    "4","5",        #eye
-                    "6","7","8","9" #mouth
-                    ]
-
-    df_right = big_frame[big_frame["rot_y"] >= 0]
-    df_right = df_right[cols_right]
-    df_right.columns = rename_cols
-
-    df_left = big_frame[big_frame["rot_y"] < 0]
-    df_left = df_left[cols_left]
-    df_left.columns = rename_cols
-
-    big_frame = pd.concat([df_left, df_right], ignore_index=True)
-
-    #説明変数と目的変数の設定
-    x = pd.DataFrame(big_frame.drop("class",axis=1))
-    y =  pd.DataFrame(big_frame["class"])
-    y = keras.utils.to_categorical(y) #class -> onehot_vec
 
     #説明変数・目的変数をそれぞれ訓練データ・テストデータに分割
-    x_train,x_test,y_train,y_test = train_test_split(x,y,test_size=0.3,random_state=1)
+    x_train,x_test,y_train,y_test = train_test_split(x,y,test_size=0.3,shuffle=True)
 
     #データの整形
     x_train = x_train.astype(np.float)
@@ -107,10 +115,13 @@ def objective(trial):
 
     # 調整したいハイパーパラメータの設定
     n_layer = trial.suggest_int('n_layer', 1, 20) # 追加する層を1-5から選ぶ
-    mid_units = int(trial.suggest_discrete_uniform('mid_units', 5, 100, 1)) # ユニット数
+    mid_units = int(trial.suggest_discrete_uniform('mid_units', 5, 100, 5)) # ユニット数
     dropout_rate = trial.suggest_uniform('dropout_rate', 0, 1) # ドロップアウト率
-    activation = trial.suggest_categorical('activation', ['relu', 'sigmoid']) # 活性化関数
-    optimizer = trial.suggest_categorical('optimizer', ['sgd', 'adam']) # 最適化アルゴリズム
+    activation = trial.suggest_categorical('activation', ['relu']) # 活性化関数
+    optimizer = trial.suggest_categorical('optimizer', ['adam']) # 最適化アルゴリズム
+
+    #一試行あたりの実行時間測定
+    start_1 = time.time()
 
     # 学習モデルの構築と学習の開始
     model = create_model(n_layer, activation, mid_units, dropout_rate)
@@ -119,25 +130,37 @@ def objective(trial):
                     loss='categorical_crossentropy',
                     metrics=['accuracy'])
     history = model.fit(x_train, y_train, 
-                        verbose=1,
-                        epochs=50,
+                        verbose=0,
+                        epochs=60,
                         validation_data=(x_test, y_test),
                         batch_size=64)
     #混同行列を算出
     predict_class = model.predict_classes(x_test, verbose=0)
     true_class = np.argmax(y_test,1)
     print(confusion_matrix(true_class, predict_class))
-
+    """
     # 学習モデルの保存
     model_json = model.to_json()
     with open('keras_model.json', 'w') as f_model:
         f_model.write(model_json)
     model.save_weights('keras_model.hdf5')
+    """
+    #実行時間表示
+    global trials
+    trials += 1
+    print("trial = " + str(trials))
     
-    # 最小値探索なので
+    elapsed_time = time.time() - start_1
+    print ("elapsed_time:{0}".format(elapsed_time) + "[sec]")
+    
+    dt_now = datetime.datetime.now()
+    print(dt_now)
+    #optunaは最小値探索なのでマイナスで返す
     return -np.amax(history.history['val_acc'])
 
 def main():
+    start = time.time()
+
     study = optuna.create_study(sampler=optuna.samplers.TPESampler())
     study.optimize(objective, n_trials=100)
     print('best_params')
@@ -150,6 +173,8 @@ def main():
     for i, k in sorted_best_params:
         print(i + ' : ' + str(k))
 
+    elapsed_time = time.time() - start
+    print ("elapsed_time:{0}".format(elapsed_time) + "[sec]")
 
 if __name__ == '__main__':
     main()
