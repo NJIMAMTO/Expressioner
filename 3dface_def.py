@@ -33,7 +33,7 @@ import datetime
 trials = 0
 
 #=======================初回データロード=======================#
-path = "/media/mokugyo/ボリューム/3Dface"
+path = "./3dface"
 files = ["F_Angry","F_Disgust","F_Fear","F_Happy","F_Neutral","F_Surprise","F_Unhappy",
     "M_Angry","M_Disgust","M_Fear","M_Happy","M_Neutral","M_Surprise","M_Unhappy"]
 V_4 = ["V0S","V2L","V0S_r","V2L_r"]
@@ -52,20 +52,20 @@ big_frame = big_frame.dropna(how='any')
 
 #ピッチ角に応じて顔半分の特徴点のみを抽出
 cols_right = ["class",
-                "23-46","25-46","27-46",        #right_eyebrow
-                "38-42","45-47",                #eye
-                "49-34","52-34","55-34","58-34" #mouth
-                ] 
+            "23-46","25-46","27-46",        #right_eyebrow
+            "45-47",                        #right_eye
+            "49-34","52-34","55-34"         #mouth
+            ] 
 cols_left = ["class",
-                "18-37","20-37","22-37",        #left_eyebrow
-                "38-42","45-47",                #eye
-                "49-34","52-34","55-34","58-34" #mouth
-                ] 
+            "18-37","20-37","22-37",        #left_eyebrow
+            "38-42",                        #left_eye
+            "52-34","55-34","58-34"         #mouth
+            ] 
 rename_cols = ["class",
-                    "1","2","3",    #eyebrow
-                    "4","5",        #eye
-                    "6","7","8","9" #mouth
-                    ]
+                "1","2","3",    #eyebrow
+                "4",        #eye
+                "5","6","7" #mouth
+                ]
 
 df_right = big_frame[big_frame["rot_y"] >= 0]
 df_right = df_right[cols_right]
@@ -88,7 +88,7 @@ def create_model(n_layer, activation, mid_units, dropout_rate):
     model = Sequential()
 
     #入力層
-    model.add(Dense(mid_units, input_shape=(9,),activation=activation))
+    model.add(Dense(mid_units, input_shape=(7,),activation=activation))
     model.add(Dropout(dropout_rate))
     model.add(BatchNormalization())
 
@@ -99,7 +99,7 @@ def create_model(n_layer, activation, mid_units, dropout_rate):
         model.add(BatchNormalization())
 
     #出力層
-    model.add(Dense(7, activation=activation))
+    model.add(Dense(7, activation="softmax"))
 
     return model
 
@@ -114,9 +114,9 @@ def objective(trial):
     #=======================データロードここまで=======================#
 
     # 調整したいハイパーパラメータの設定
-    n_layer = trial.suggest_int('n_layer', 1, 20) # 追加する層を1-5から選ぶ
-    mid_units = int(trial.suggest_discrete_uniform('mid_units', 5, 100, 5)) # ユニット数
-    dropout_rate = trial.suggest_uniform('dropout_rate', 0, 1) # ドロップアウト率
+    n_layer = trial.suggest_int('n_layer', 1, 5) # 追加する層を1-5から選ぶ
+    mid_units = int(trial.suggest_discrete_uniform('mid_units', 3, 100, 3)) # ユニット数
+    dropout_rate = trial.suggest_uniform('dropout_rate', 0, 0.5) # ドロップアウト率
     activation = trial.suggest_categorical('activation', ['relu']) # 活性化関数
     optimizer = trial.suggest_categorical('optimizer', ['adam']) # 最適化アルゴリズム
 
@@ -131,9 +131,9 @@ def objective(trial):
                     metrics=['accuracy'])
     history = model.fit(x_train, y_train, 
                         verbose=0,
-                        epochs=60,
+                        epochs=15,
                         validation_data=(x_test, y_test),
-                        batch_size=64)
+                        batch_size=256)
     #混同行列を算出
     predict_class = model.predict_classes(x_test, verbose=0)
     true_class = np.argmax(y_test,1)
@@ -162,7 +162,7 @@ def main():
     start = time.time()
 
     study = optuna.create_study(sampler=optuna.samplers.TPESampler())
-    study.optimize(objective, n_trials=100)
+    study.optimize(objective, n_trials=50)
     print('best_params')
     print(study.best_params)
     print('-1 x best_value')

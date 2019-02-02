@@ -33,25 +33,25 @@ def plot_history(history):
     # 精度の履歴をプロット
     plt.subplot(2,1,1)
     plt.plot(history.history['acc'])
-    plt.plot(history.history['val_acc'])
+    #plt.plot(history.history['val_acc'])
     #plt.title('model accuracy')
     plt.xlabel('epoch')
     plt.ylabel('accuracy')
-    plt.legend(['Lerning', 'Test'], loc='lower right')
+    plt.legend(['Lerning'], loc='lower right')
     #plt.show()
 
     # 損失の履歴をプロット
     plt.subplot(2,1,2)
     plt.plot(history.history['loss'])
-    plt.plot(history.history['val_loss'])
+    #plt.plot(history.history['val_loss'])
     #plt.title('model loss')
     plt.xlabel('epoch')
     plt.ylabel('loss')
-    plt.legend(['Lerning', 'Test'], loc="upper right")
+    plt.legend(['Lerning'], loc="upper right")
     plt.show()
 
 
-path = "/media/mokugyo/ボリューム/3Dface"
+path = "./3dface"
 files = ["F_Angry","F_Disgust","F_Fear","F_Happy","F_Neutral","F_Surprise","F_Unhappy",
     "M_Angry","M_Disgust","M_Fear","M_Happy","M_Neutral","M_Surprise","M_Unhappy"]
 V_4 = ["V0S","V2L","V0S_r","V2L_r"]
@@ -74,18 +74,18 @@ big_frame = big_frame.dropna(how='any')
 #ピッチ角に応じて顔半分の特徴点のみを抽出
 cols_right = ["class",
             "23-46","25-46","27-46",        #right_eyebrow
-            "38-42","45-47",                #eye
-            "49-34","52-34","55-34","58-34" #mouth
+            "45-47",                        #right_eye
+            "49-34","52-34","55-34"         #mouth
             ] 
 cols_left = ["class",
             "18-37","20-37","22-37",        #left_eyebrow
-            "38-42","45-47",                #eye
-            "49-34","52-34","55-34","58-34" #mouth
+            "38-42",                        #left_eye
+            "52-34","55-34","58-34"         #mouth
             ] 
 rename_cols = ["class",
                 "1","2","3",    #eyebrow
-                "4","5",        #eye
-                "6","7","8","9" #mouth
+                "4",        #eye
+                "5","6","7" #mouth
                 ]
 
 df_right = big_frame[big_frame["rot_y"] >= 0]
@@ -104,7 +104,7 @@ y =  pd.DataFrame(big_frame["class"])
 y = keras.utils.to_categorical(y) #class -> onehot_vec
 
 #説明変数・目的変数をそれぞれ訓練データ・テストデータに分割
-x_train,x_test,y_train,y_test = train_test_split(x,y,test_size=0.3,random_state=1)
+x_train,x_test,y_train,y_test = train_test_split(x,y,test_size=0.0,random_state=1)
 
 #データの整形
 x_train = x_train.astype(np.float)
@@ -113,12 +113,12 @@ x_test = x_test.astype(np.float)
 print("x_train: {}\n x_test: {}".format(x_train.shape, x_test.shape))
 
 #ニューラルネットワークモデルの設定
+dropout_rate = 9.79353820544527e-05
 model = Sequential()
-model.add(Dense(12, input_shape=(9,)))
+model.add(Dense(70, input_shape=(7,)))
 model.add(Activation('relu'))
-
-model.add(Dense(7))
-model.add(Activation('softmax'))
+model.add(Dropout(dropout_rate))
+model.add(BatchNormalization())
 
 model.add(Dense(7))
 model.add(Activation('softmax'))
@@ -130,10 +130,11 @@ model.compile(
 
 #ニューラルネットワークの学習
 history = model.fit(x_train, y_train,
-                    batch_size=200,
-                    epochs=400,
+                    batch_size=256,
+                    epochs=20,
                     verbose=1,
-                    validation_data=(x_test, y_test))
+                    #validation_data=(x_test, y_test)
+                    )
 
 """
 #ニューラルネットワークの推論
@@ -144,8 +145,8 @@ print("Test accuracy:",score[1])
 """
 
 #混同行列を算出
-predict_class = model.predict_classes(x_test, verbose=0)
-true_class = np.argmax(y_test,1)
+predict_class = model.predict_classes(x_train, verbose=0)
+true_class = np.argmax(y_train,1)
 print(confusion_matrix(true_class, predict_class))
 
 """
