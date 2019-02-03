@@ -33,7 +33,7 @@ import datetime
 trials = 0
 
 #=======================初回データロード=======================#
-path = "/media/mokugyo/ボリューム/3Dface"
+path = "./3dface"
 files = ["F_Angry","F_Disgust","F_Fear","F_Happy","F_Neutral","F_Surprise","F_Unhappy",
     "M_Angry","M_Disgust","M_Fear","M_Happy","M_Neutral","M_Surprise","M_Unhappy"]
 V_4 = ["V0S","V2L","V0S_r","V2L_r"]
@@ -99,7 +99,7 @@ def create_model(n_layer, activation, mid_units, dropout_rate):
         model.add(BatchNormalization())
 
     #出力層
-    model.add(Dense(7, activation=activation))
+    model.add(Dense(7, activation="softmax"))
 
     return model
 
@@ -114,10 +114,10 @@ def objective(trial):
     #=======================データロードここまで=======================#
 
     # 調整したいハイパーパラメータの設定
-    n_layer = trial.suggest_int('n_layer', 1, 20) # 追加する層を1-5から選ぶ
-    mid_units = int(trial.suggest_discrete_uniform('mid_units', 5, 100, 5)) # ユニット数
+    n_layer = trial.suggest_int('n_layer', 1, 5) # 追加する層を1-5から選ぶ
+    mid_units = int(trial.suggest_discrete_uniform('mid_units', 5, 70, 1)) # ユニット数
     dropout_rate = trial.suggest_uniform('dropout_rate', 0, 1) # ドロップアウト率
-    activation = trial.suggest_categorical('activation', ['relu']) # 活性化関数
+    activation = trial.suggest_categorical('activation', ['sigmoid']) # 活性化関数
     optimizer = trial.suggest_categorical('optimizer', ['adam']) # 最適化アルゴリズム
 
     #一試行あたりの実行時間測定

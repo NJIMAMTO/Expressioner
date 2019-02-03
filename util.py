@@ -9,6 +9,7 @@ from keras.utils import Sequence
 from keras.models import Model
 from keras.layers import Concatenate, Lambda
 from keras.callbacks import Callback
+from sklearn.metrics import confusion_matrix
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 
@@ -64,6 +65,35 @@ class PlotHistory(Callback):
         self.acc = []
         self.val_loss = []
         self.val_acc = []
+
+
+class ShowConfmat(Callback):
+    def __init__(self, data_val, label_val, batch_size, interval=None, **kwargs):
+        super().__init__(**kwargs)
+        self.batch_size = batch_size
+        self.data_val = data_val
+        self.label_val = np.argmax(label_val, axis=1)
+        self.classes = self.label_val.max() + 1
+        self.interval = interval
+        self.max_acc = 0
+        print("class: ", self.classes)
+
+    def on_epoch_end(self, epoch, logs={}):
+        val_acc = logs.get('val_acc')
+        if (self.interval is None) and self.max_acc < val_acc:
+            self.max_acc = val_acc
+            self.confmat()
+
+        elif (self.interval is not None) and (epoch + 1) % self.interval == 0:
+            self.confmat()
+
+    def confmat(self):
+        pred = self.model.predict(self.data_val, batch_size=self.batch_size)
+        pred = np.argmax(pred, axis=1)
+        conf_mat = confusion_matrix(self.label_val, pred)
+        conf_mat_per = conf_mat / conf_mat.sum(axis=1).reshape((self.classes, 1)) * 100
+        print('\n', conf_mat, '\n')
+        print(conf_mat_per, '\n')
 
 
 class AudioSequence(Sequence):
@@ -200,45 +230,3 @@ def make_parallel(model, gpu_count):
             merged.append(Concatenate(axis=0)(outputs))
 
         return Model(input=model.inputs, output=merged)
-
-
-def log_specgram(audio, sample_rate, window_size=20,
-                 step_size=10, eps=1e-10):
-    nperseg = int(round(window_size * sample_rate / 1e3))
-    noverlap = int(round(step_size * sample_rate / 1e3))
-    freqs, times, spec = signal.spectrogram(audio,
-                                            fs=sample_rate,
-                                            window='hann',
-                                            nperseg=nperseg,
-                                            noverlap=noverlap,
-                                            detrend=False)
-    return freqs, times, np.log(spec.T.astype(np.float32) + eps).T
-
-
-def assign_cmvn_all(spectrogram):
-    # 誤差が大きいので非推奨
-    mean = np.mean(spectrogram)
-    std = np.std(spectrogram) + 1e-10
-    spectrogram = (spectrogram - mean) / std
-    return spectrogram
-
-
-def assign_cmvn(spectrogram):
-    mean = np.mean(spectrogram, axis=0)
-    std = np.std(spectrogram, axis=0) + 1e-10
-    spectrogram = (spectrogram - mean) / std
-    return spectrogram
-
-
-def calculate_log_mel(samples, sample_rate, n_mels=128):
-    S = librosa.feature.melspectrogram(samples.astype(np.float32), sr=sample_rate, n_mels=n_mels, n_fft=1024, hop_length=128)
-    log_S = librosa.power_to_db(S, ref=np.max)
-    return log_S.astype(np.int16)
-
-
-def stereo2mono(audiodata, dtype=np.int16):
-    d = audiodata.sum(axis=1) / 2
-    d = d.astype(dtype)
-    return d
-
-

@@ -1,3 +1,4 @@
+
 # coding: utf-8
 
 #モジュールの読み込み
@@ -23,32 +24,17 @@ from keras.optimizers import RMSprop
 from keras.optimizers import Adam
 from keras.utils import Sequence
 from keras.layers.core import Dense, Activation
-import librosa
 from util import ShowConfmat
+import optuna
 
-def plot_history(history):
-    # print(history.history.keys())
+import time
+import datetime
 
-    # 精度の履歴をプロット
-    plt.subplot(2,1,1)
-    plt.plot(history.history['acc'])
-    plt.plot(history.history['val_acc'])
-    #plt.title('model accuracy')
-    plt.xlabel('epoch')
-    plt.ylabel('accuracy')
-    plt.legend(['Lerning', 'Test'], loc='lower right')
-    #plt.show()
+import uuid
 
-    # 損失の履歴をプロット
-    plt.subplot(2,1,2)
-    plt.plot(history.history['loss'])
-    plt.plot(history.history['val_loss'])
-    #plt.title('model loss')
-    plt.xlabel('epoch')
-    plt.ylabel('loss')
-    plt.legend(['Lerning', 'Test'], loc="upper right")
-    plt.show()
+trials = 0
 
+#=======================初回データロード=======================#
 path  = "./3dface_v4/"
 files = [["V0S_A","V2L_A","V2L_Ar"],
         ["V0S_D","V2L_D","V2L_Dr"],
@@ -136,72 +122,110 @@ x_test = pd.DataFrame(test.drop("class",axis=1))
 y_test =  pd.DataFrame(test["class"])
 y_test = keras.utils.to_categorical(y_test, num_classes=6) #class -> onehot_vec
 
-#データの整形
-x_train = x_train.astype(np.float)
-x_test = x_test.astype(np.float)
+#=======================初回データロードここまで=======================#
 
-print("x_train: {}\n x_test: {}".format(x_train.shape, x_test.shape))
+def create_model(n_layer, activation, mid_units, dropout_rate):
+    model = Sequential()
 
-#ニューラルネットワークモデルの設定
-batch_size = 64
-show_conf = ShowConfmat(x_test, y_test, batch_size)
+    #入力層
+    model.add(Dense(mid_units, input_shape=(14,),activation=activation))
+    model.add(BatchNormalization())
 
-model = Sequential()
-model.add(Dense(16, input_shape=(14,)))
-model.add(Activation('relu'))
-model.add(BatchNormalization())
+    #中間層
+    for ii in range(n_layer):
+        model.add(Dense(mid_units, activation=activation))
+        model.add(BatchNormalization())
 
-model.add(Dense(16))
-model.add(Activation('relu'))
-model.add(BatchNormalization())
+    #出力層
+    model.add(Dense(6, activation="softmax"))
 
-model.add(Dense(16))
-model.add(Activation('relu'))
-model.add(BatchNormalization())
+    return model
 
-model.add(Dense(16))
-model.add(Activation('relu'))
-model.add(BatchNormalization())
+def objective(trial):
+    # 試行にUUIDを設定
+    trial_uuid = str(uuid.uuid4())
+    trial.set_user_attr("uuid", trial_uuid)
+    
+    #説明変数・目的変数をそれぞれ訓練データ・テストデータに分割
+    global x_train
+    global x_test
+    global y_train
+    global y_test
 
-model.add(Dense(6))
-model.add(Activation('softmax'))
+    #データの整形
+    x_train = x_train.astype(np.float)
+    x_test = x_test.astype(np.float)
+    #=======================データロードここまで=======================#
 
+    # 調整したいハイパーパラメータの設定
+    n_layer = trial.suggest_int('n_layer', 1, 5) # 追加する層を1-5から選ぶ
+    mid_units = int(trial.suggest_discrete_uniform('mid_units', 5, 70, 1)) # ユニット数
+    dropout_rate = trial.suggest_uniform('dropout_rate', 0, 1) # ドロップアウト率
+    activation = trial.suggest_categorical('activation', ['relu']) # 活性化関数
+    optimizer = trial.suggest_categorical('optimizer', ['adam']) # 最適化アルゴリズム
+    batch_size = 64
+    show_conf = ShowConfmat(x_test, y_test, batch_size)
 
-model.compile(
-                optimizer='adam', 
-                loss='categorical_crossentropy', 
-                metrics=['accuracy'])
+    #一試行あたりの実行時間測定
+    start_1 = time.time()
 
-#ニューラルネットワークの学習
-history = model.fit(x_train, y_train,
-                    batch_size=batch_size,
-                    epochs=9,
-                    verbose=1,
-                    validation_data=(x_test, y_test),
-                    callbacks=[show_conf])
+    # 学習モデルの構築と学習の開始
+    model = create_model(n_layer, activation, mid_units, dropout_rate)
+    
+    model.compile(optimizer=optimizer,
+                    loss='categorical_crossentropy',
+                    metrics=['accuracy'])
+    history = model.fit(x_train, y_train, 
+                        verbose=0,
+                        epochs=10,
+                        validation_data=(x_test, y_test),
+                        batch_size=batch_size,
+                        callbacks=[show_conf])
+    """
+    #混同行列を算出
+    predict_class = model.predict_classes(x_test, verbose=0)
+    true_class = np.argmax(y_test,1)
+    print(confusion_matrix(true_class, predict_class))
+    """
+    
+    # 学習モデルの保存
+    model_json = model.to_json()
+    with open('keras_model.json', 'w') as f_model:
+        f_model.write(model_json)
+    model.save_weights('keras_model.hdf5')
+    
+    #実行時間表示
+    global trials
+    trials += 1
+    print("trial = " + str(trials))
+    
+    elapsed_time = time.time() - start_1
+    print ("elapsed_time:{0}".format(elapsed_time) + "[sec]")
+    
+    dt_now = datetime.datetime.now()
+    print(dt_now)
+    #optunaは最小値探索なのでマイナスで返す
+    return -np.amax(history.history['val_acc'])
 
-"""
-#ニューラルネットワークの推論
-score = model.evaluate(x_test,y_test,verbose=1)
-print("\n")
-print("Test loss:",score[0])
-print("Test accuracy:",score[1])
-"""
+def main():
+    start = time.time()
 
-#混同行列を算出
-predict_class = model.predict_classes(x_test, verbose=0)
-true_class = np.argmax(y_test,1)
-print(confusion_matrix(true_class, predict_class))
+    study = optuna.create_study(sampler=optuna.samplers.TPESampler())
+    study.optimize(objective, n_trials=100)
+    print('best_params')
+    print(study.best_params)
+    print('-1 x best_value')
+    print(-study.best_value)
 
-"""
-#historyをエクセルファイルに出力
-DF = pd.DataFrame(history.history)
-DF = DF.ix[:,['acc','val_acc','loss','val_loss']]
-DF.index = DF.index + 1
+    print('\n --- sorted --- \n')
+    sorted_best_params = sorted(study.best_params.items(), key=lambda x : x[0])
+    for i, k in sorted_best_params:
+        print(i + ' : ' + str(k))
+    
+    print(study.best_trial.user_attrs)
 
-output_name = '5_50_80'
-DF.to_excel('/media/mokugyo/ボリューム/Experiment_20180127/学習結果/' + output_name + '.xlsx')
-"""
+    elapsed_time = time.time() - start
+    print ("elapsed_time:{0}".format(elapsed_time) + "[sec]")
 
-# 学習履歴をプロット
-plot_history(history)
+if __name__ == '__main__':
+    main()
