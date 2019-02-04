@@ -115,9 +115,9 @@ def objective(trial):
 
     # 調整したいハイパーパラメータの設定
     n_layer = trial.suggest_int('n_layer', 1, 5) # 追加する層を1-5から選ぶ
-    mid_units = int(trial.suggest_discrete_uniform('mid_units', 3, 100, 3)) # ユニット数
-    dropout_rate = trial.suggest_uniform('dropout_rate', 0, 0.5) # ドロップアウト率
-    activation = trial.suggest_categorical('activation', ['relu']) # 活性化関数
+    mid_units = int(trial.suggest_discrete_uniform('mid_units', 5, 70, 1)) # ユニット数
+    dropout_rate = trial.suggest_uniform('dropout_rate', 0, 1) # ドロップアウト率
+    activation = trial.suggest_categorical('activation', ['sigmoid']) # 活性化関数
     optimizer = trial.suggest_categorical('optimizer', ['adam']) # 最適化アルゴリズム
 
     #一試行あたりの実行時間測定

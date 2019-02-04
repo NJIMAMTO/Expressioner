@@ -1,0 +1,16 @@
+補正あり
+UUID：2f629bb5-c6f7-4f08-9f75-4d728d5a5a5c
+activation : relu
+dropout_rate : 0.1868471860229622
+mid_units : 70.0
+n_layer : 5
+optimizer : adam
+
+補正なし
+UUID:72b6ce41-91b9-46bc-9da4-3d96f66b521f
+activation : relu
+dropout_rate : 0.9241928530158565
+mid_units : 70.0
+n_layer : 4
+optimizer : adam
+
