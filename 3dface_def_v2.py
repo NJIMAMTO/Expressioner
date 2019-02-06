@@ -35,7 +35,7 @@ import uuid
 trials = 0
 
 #=======================初回データロード=======================#
-path  = "./3dface_v4_nohomo/"
+path  = "./3dface_v5/"
 files = [["V0S_A","V2L_A","V2L_Ar"],
         ["V0S_D","V2L_D","V2L_Dr"],
         ["V0S_F","V2L_F","V2L_Fr"],
@@ -190,9 +190,9 @@ def objective(trial):
     
     # 学習モデルの保存
     model_json = model.to_json()
-    with open('keras_model_nohomo.json', 'w') as f_model:
+    with open('keras_model2.json', 'w') as f_model:
         f_model.write(model_json)
-    model.save_weights('keras_model_nohomo.hdf5')
+    model.save_weights('keras_model2.hdf5')
     
     #実行時間表示
     global trials

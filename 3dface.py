@@ -49,7 +49,8 @@ def plot_history(history):
     plt.legend(['Lerning'], loc="upper right")
     plt.show()
 
-path  = "./3dface_v4/"
+path  = "./3dface_v5/"
+
 files = [["V0S_A","V2L_A","V2L_Ar"],
         ["V0S_D","V2L_D","V2L_Dr"],
         ["V0S_F","V2L_F","V2L_Fr"],
@@ -117,10 +118,10 @@ dft_left = df_test[df_test["rot_y"] < 0]
 dft_left = dft_left[cols_left]
 dft_left.columns = rename_cols
 
-dfl_right = df_test[df_test["rot_y"] >= 0]
+dfl_right = df_learn[df_learn["rot_y"] >= 0]
 dfl_right = dfl_right[cols_right]
 dfl_right.columns = rename_cols
-dfl_left = df_test[df_test["rot_y"] < 0]
+dfl_left = df_learn[df_learn["rot_y"] < 0]
 dfl_left = dfl_left[cols_left]
 dfl_left.columns = rename_cols
 
@@ -155,15 +156,19 @@ model.add(Dense(70))
 model.add(Activation('relu'))
 model.add(BatchNormalization())
 
-model.add(Dense(60))
+model.add(Dense(70))
 model.add(Activation('relu'))
 model.add(BatchNormalization())
 
-model.add(Dense(50))
+model.add(Dense(70))
 model.add(Activation('relu'))
 model.add(BatchNormalization())
 
-model.add(Dense(40))
+model.add(Dense(70))
+model.add(Activation('relu'))
+model.add(BatchNormalization())
+
+model.add(Dense(70))
 model.add(Activation('relu'))
 model.add(BatchNormalization())
 
@@ -183,7 +188,14 @@ history = model.fit(x_train, y_train,
                     verbose=1,
                     validation_data=(x_test, y_test),
                     callbacks=[show_conf])
-
+"""
+# 学習モデルの保存
+model_json = model.to_json()
+with open('keras_model2.json', 'w') as f_model:
+    f_model.write(model_json)
+model.save_weights('keras_model2.hdf5')
+"""
+model.save('model_v5.h5')
 """
 #ニューラルネットワークの推論
 score = model.evaluate(x_test,y_test,verbose=1)
