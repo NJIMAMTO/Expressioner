@@ -61,48 +61,48 @@ for f_name in glob.glob("./Deep_for_recognition/*.csv"):
         # ./Deep_for_recognitionと./SVM_for_learningで同名のファイルを検索
         for name in glob.glob("./SVM_for_learning*/" + split_filepath[2], recursive=False):
             df_target = pd.read_csv(name,index_col=0)
-            _, col = df.shape
-            _, target_col = df_target.shape
-            
-
-            out = y_predict[col - target_col:col]
+            row, col = df.shape
+            target_row, target_col = df_target.shape
+        
+            out = y_predict[row - target_row:row]
             out_frame = pd.DataFrame(out)
             out_cols = ["Angry","Disgust","Fear","Happy","Surpise","Unhappy"]
             outframe = pd.DataFrame(out, columns=out_cols)
-            outframe.append(out_frame,ignore_index = True)
-            outframe['lavel'] = out_frame.idxmax(axis=1)
-            print(outframe)
+
+            outframe['lavel'] = out.argmax(axis=1)
+            concat_file = pd.concat([df_target,outframe], axis=1)
+            concat_file.to_csv(name)
             
-    """
-    classes_num = {
-                    0:0,
-                    1:0,
-                    2:0,
-                    3:0,
-                    4:0,
-                    5:0
-                    }
-    classes_acc = {
-                    0:0,
-                    1:0,
-                    2:0,
-                    3:0,
-                    4:0,
-                    5:0
-                    }
-    for y_t, y_p in zip(y_test, y_predict):
-        true_label = np.argmax(y_t)
-        predict_label = np.argmax(y_p)
-        if true_label == predict_label:
-            classes_acc[true_label] += 1
-        classes_num[true_label] += 1
+        """
+        classes_num = {
+                        0:0,
+                        1:0,
+                        2:0,
+                        3:0,
+                        4:0,
+                        5:0
+                        }
+        classes_acc = {
+                        0:0,
+                        1:0,
+                        2:0,
+                        3:0,
+                        4:0,
+                        5:0
+                        }
+        for y_t, y_p in zip(y_test, y_predict):
+            true_label = np.argmax(y_t)
+            predict_label = np.argmax(y_p)
+            if true_label == predict_label:
+                classes_acc[true_label] += 1
+            classes_num[true_label] += 1
 
-    print(classes_acc)
-    print(classes_num)
-    print(y_test[30], np.argmax(y_test[30]))
-    print(true_label)
-    print("")
+        print(classes_acc)
+        print(classes_num)
+        print(y_test[30], np.argmax(y_test[30]))
+        print(true_label)
+        print("")
 
-    for i in range(6):
-        print("class {0}, acc {1}".format(i, classes_acc[i]/(classes_num[i] + sys.float_info.epsilon)))
-    """
+        for i in range(6):
+            print("class {0}, acc {1}".format(i, classes_acc[i]/(classes_num[i] + sys.float_info.epsilon)))
+        """
